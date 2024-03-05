@@ -1,114 +1,113 @@
-import copy
-from heapq import heappush, heappop
-n = 3
-row = [ 1, 0, -1, 0 ]
-col = [ 0, -1, 0, 1 ]
-class priorityQueue:
-	def __init__(self):
-		self.heap = []
-	def push(self, k):
-		heappush(self.heap, k)
-	def pop(self):
-		return heappop(self.heap)
-	def empty(self):
-		if not self.heap:
-			return True
-		else:
-			return False
-class node:	
-	def __init__(self, parent, mat, empty_tile_pos,
-				cost, level):
-		self.parent = parent
-		self.mat = mat
-		self.empty_tile_pos = empty_tile_pos
-		self.cost = cost
-		self.level = level
-	def __lt__(self, nxt):
-		return self.cost < nxt.cost
-def calculateCost(mat, final) -> int:	
-	count = 0
-	for i in range(n):
-		for j in range(n):
-			if ((mat[i][j]) and
-				(mat[i][j] != final[i][j])):
-				count += 1
-				
-	return count
-def newNode(mat, empty_tile_pos, new_empty_tile_pos,
-			level, parent, final) -> node:
-	new_mat = copy.deepcopy(mat)
-	x1 = empty_tile_pos[0]
-	y1 = empty_tile_pos[1]
-	x2 = new_empty_tile_pos[0]
-	y2 = new_empty_tile_pos[1]
-	new_mat[x1][y1], new_mat[x2][y2] = new_mat[x2][y2], new_mat[x1][y1]
-	cost = calculateCost(new_mat, final)
 
-	new_node = node(parent, new_mat, new_empty_tile_pos,
-					cost, level)
-	return new_node
-def printMatrix(mat):
-	for i in range(n):
-		for j in range(n):
-			print("%d " % (mat[i][j]), end = " ")	
-		print()
-def isSafe(x, y):
-	return x >= 0 and x < n and y >= 0 and y < n
-def printPath(root):
-	if root == None:
-		return
-	printPath(root.parent)
-	printMatrix(root.mat)
-	print()
-def solve(initial, empty_tile_pos, final):
-	pq = priorityQueue()
-	cost = calculateCost(initial, final)
-	root = node(None, initial, 
-				empty_tile_pos, cost, 0)
-	pq.push(root)
-	while not pq.empty():
-		minimum = pq.pop()
-		if minimum.cost == 0:
-			printPath(minimum)
-			return
-		for i in range(4):
-			new_tile_pos = [
-				minimum.empty_tile_pos[0] + row[i],
-				minimum.empty_tile_pos[1] + col[i], ]
-				
-			if isSafe(new_tile_pos[0], new_tile_pos[1]):
-				child = newNode(minimum.mat,
-								minimum.empty_tile_pos,
-								new_tile_pos,
-								minimum.level + 1,
-								minimum, final,)
+import heapq
 
-				pq.push(child)
-initial = [ [ 1, 2, 3 ], 
-			[ 5, 6, 0 ], 
-			[ 7, 8, 4 ] ]
+class Puzzle:
+    def __init__(self, state, parent=None, move=None):
+        self.state = state
+        self.parent = parent
+        self.move = move
+        self.cost = 0
+        self.depth = 0
+        if parent:
+            self.depth = parent.depth + 1
 
-final = [ [ 1, 2, 3 ], 
-		[ 5, 8, 6 ], 
-		[ 0, 7, 4 ] ]
+    def __eq__(self, other):
+        return self.state == other.state
 
-empty_tile_pos = [ 1, 2 ]
-solve(initial, empty_tile_pos, final)
+    def __hash__(self):
+        return hash(str(self.state))
 
-OUTPUT:-
-1  2  3  
-5  6  0  
-7  8  4  
+    def __lt__(self, other):
+        return self.cost < other.cost
 
-1  2  3  
-5  0  6  
-7  8  4  
+    def goal_state(self):
+        goal = [[1, 2, 3], [4, 5, 6], [7, 8, 0]]
+        return self.state == goal
 
-1  2  3  
-5  8  6  
-7  0  4  
+    def possible_moves(self):
+        moves = []
+        i, j = self.find_zero()
+        if i > 0:
+            moves.append((-1, 0))  # Move the blank space up
+        if i < 2:
+            moves.append((1, 0))   # Move the blank space down
+        if j > 0:
+            moves.append((0, -1))  # Move the blank space left
+        if j < 2:
+            moves.append((0, 1))   # Move the blank space right
+        return moves
 
-1  2  3  
-5  8  6  
-0  7  4  
+    def find_zero(self):
+        for i in range(3):
+            for j in range(3):
+                if self.state[i][j] == 0:
+                    return i, j
+
+    def generate_child(self, move):
+        new_state = [row[:] for row in self.state]
+        i, j = self.find_zero()
+        new_i = i + move[0]
+        new_j = j + move[1]
+        new_state[i][j], new_state[new_i][new_j] = new_state[new_i][new_j], new_state[i][j]
+        return Puzzle(new_state, self, move)
+
+    def manhattan_distance(self):
+        distance = 0
+        for i in range(3):
+            for j in range(3):
+                if self.state[i][j] != 0:
+                    value = self.state[i][j]
+                    goal_i, goal_j = (value - 1) // 3, (value - 1) % 3
+                    distance += abs(i - goal_i) + abs(j - goal_j)
+        return distance
+
+    def print_solution(self):
+        if self.parent:
+            self.parent.print_solution()
+        if self.move:
+            print(f"Move the blank space {'Up' if self.move == (-1, 0) else 'Down' if self.move == (1, 0) else 'Left' if self.move == (0, -1) else 'Right'}")
+        for row in self.state:
+            print(row)
+        print(f"Cost: {self.cost}")
+        print()
+
+def get_user_input():
+    print("Enter the initial state of the 8-puzzle (use 0 to represent the blank space):")
+    initial_state = []
+    for i in range(3):
+        row = input(f"Enter elements for row {i + 1} separated by space: ").strip().split()
+        initial_state.append([int(num) for num in row])
+    return initial_state
+
+def solve_puzzle(initial_state):
+    initial_node = Puzzle(initial_state)
+    frontier = []
+    heapq.heappush(frontier, initial_node)
+
+    visited = set()
+
+    while frontier:
+        current_node = heapq.heappop(frontier)
+        visited.add(current_node)
+
+        if current_node.goal_state():
+            return current_node
+
+        for move in current_node.possible_moves():
+            child = current_node.generate_child(move)
+            if child not in visited:
+                child.cost = child.depth + child.manhattan_distance()
+                heapq.heappush(frontier, child)
+
+    return None
+
+if __name__ == "__main__":
+    initial_state = get_user_input()
+    solution = solve_puzzle(initial_state)
+    if solution:
+        print("Solution found:")
+        solution.print_solution()
+    else:
+        print("No solution found.")
+
 
