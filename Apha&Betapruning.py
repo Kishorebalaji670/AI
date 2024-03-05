@@ -48,6 +48,4 @@ if __name__ == "__main__":
     result = minimax_alpha_beta(root, 3, alpha, beta, True)
 
     print("Optimal value:", result)
-
-OUTPUT:-
-Optimal value: 7
+    
